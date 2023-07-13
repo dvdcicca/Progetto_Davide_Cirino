@@ -1,1 +1,1 @@
-Simulazione di un fluido quantistico di Lennard Jones
+# Simulazione di un fluido quantistico di Lennard Jones con Monte Carlo variazionale
