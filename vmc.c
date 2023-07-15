@@ -3,8 +3,8 @@
 #include <math.h>
 #include <time.h>
 #include <float.h>
-#include <headers/cubegnr.h>
-#include <headers/io.h>
+#include <io.h>
+#include <cubegnr.h>
 
 
 #define PI 3.14159265358979323846
@@ -20,7 +20,6 @@ double W(double , double , double , double);
 int main(){
 
     flush("CC2.dat");
-    flush("monte_lq.dat");
 
     int n = 10;
     double rho = 0.8;
