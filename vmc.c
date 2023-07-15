@@ -1,10 +1,7 @@
 #include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
 #include <time.h>
 #include <float.h>
-#include <io.h>
-#include <cubegnr.h>
+#include "headers/cubegnr.h"
 
 
 #define PI 3.14159265358979323846
@@ -34,7 +31,7 @@ int main(){
     double T1=1.1;
     double P=T1*rho;
     double c = 0;
-    r_initiator(n, rho, R);
+    r_initiator(n, rho, R, "CC2.dat");
     
     return 0;
 }
