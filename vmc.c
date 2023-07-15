@@ -3,21 +3,19 @@
 #include <math.h>
 #include <time.h>
 #include <float.h>
+#include <headers/cubegnr.h>
+#include <headers/io.h>
+
 
 #define PI 3.14159265358979323846
 #define N 1000
 
 //Dichiarazione delle varie funzioni
-void r_initiator(int , double , double R[][3] );
-void r_initiator_BCC(int , double , double R[][3] );
-void outputCC(double , double , double );
 double dist(double R[][3], int , int , double );
 void dist_2(double R[][3], double Rij[3], double , int , int );
 double Vol(double, double );
 double V(double , double , double , double );
 double W(double , double , double , double);
-void output(double , double , double , double , char *);
-void flush(char *);
 
 int main(){
 
@@ -42,55 +40,6 @@ int main(){
     return 0;
 }
 
-
-//Definizione dell'inizializzatore delle posizioni'
-void r_initiator(int n, double rho, double R[][3]){
-    int i = 0;
-    double a = pow(1./rho, 1./3);
-    for(int k = 0; k<=n-1;k++){
-        for(int l = 0; l<=n-1; l++){
-            for(int m = 0; m<=n-1; m++){
-                R[i][0]=k*a;
-                R[i][1]=l*a;
-                R[i][2]=m*a;
-                outputCC( R[i][0],  R[i][1],  R[i][2]);
-                i++;  
-            }
-        }
-    }
-}
-
-
-void r_initiator_BCC(int n, double rho, double R[][3]){
-    int i = 0;
-    double a = pow(2./rho, 1./3);
-    for(int k = 0; k<=n-1;k++){
-        for(int l = 0; l<=n-1; l++){
-            for(int m = 0; m<=n-1; m++){
-                R[i][0]=k*a;
-                R[i][1]=l*a;
-                R[i][2]=m*a;
-                outputCC( R[i][0],  R[i][1],  R[i][2]);
-                i++;  
-                R[i][0]=k*a+1./2;
-                R[i][1]=l*a+1./2;
-                R[i][2]=m*a+1./2;
-                outputCC( R[i][0],  R[i][1],  R[i][2]);
-                i++;  
-            }
-        }
-    }
-}
-
-
-//Definizione della funzione per stampare in un file le posizioni iniziali
-void outputCC(double x1, double x2, double x3){
-    FILE *fp;
-    fp = fopen("CC2.dat", "a");
-    fprintf(fp, "%lf %lf %lf\n", x1, x2, x3);
-    fclose(fp);
-    return;
-}
 
 
 double dist(double R[][3], int p, int q, double L){    
@@ -134,19 +83,4 @@ double W(double rij, double sigma, double L, double epsilon){
     }
     return -dV*rij/N;
 
-}
-
-
-void output(double t, double P, double E, double acc, char *title){
-    FILE *fp;
-    fp = fopen(title, "a");
-    fprintf(fp, "%lf %lf %lf %lf \n", t, P, E, acc);
-    fclose(fp);
-    return;
-}
-
-void flush(char *title){
-FILE *fp;
-fp = fopen(title, "w");
-fclose(fp);
 }
