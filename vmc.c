@@ -27,6 +27,7 @@ int main(){
     double D=0.18;
     double eps = 10.22;
     double sigma = 2.556;
+    double h = 6.0596;
     double c = 0;
     r_initiator(n, rho, R, "CC.dat");
     
