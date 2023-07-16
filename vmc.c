@@ -5,7 +5,7 @@
 
 
 #define PI 3.14159265358979323846
-#define N 1000
+#define N 64
 
 //Dichiarazione delle varie funzioni
 double dist(double R[][3], int , int , double );
@@ -16,22 +16,19 @@ double W(double , double , double , double);
 
 int main(){
 
-    flush("CC2.dat");
-
-    int n = 10;
-    double rho = 0.8;
+    flush("CC.dat");
+    int n = 4;
+    double rho = 0.0218;
     double L = pow(N/rho, 1./3);
     double R[N][3];
     double dr=5;
     double M=L/(2*dr);
     double r=1;
     double D=0.18;
-    double sigma = 1;
-    double eps=1;
-    double T1=1.1;
-    double P=T1*rho;
+    double eps = 10.22;
+    double sigma = 2.556;
     double c = 0;
-    r_initiator(n, rho, R, "CC2.dat");
+    r_initiator(n, rho, R, "CC.dat");
     
     return 0;
 }
