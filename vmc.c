@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <float.h>
-#include "headers/cubegnr.h"
+#include "headers/cubegnr.h" //funzioni per creare il mio reticolo cubico e che mi include anche le funzioni per stampare in un file
 
 
 #define PI 3.14159265358979323846
@@ -12,7 +12,7 @@ double dist(double R[][3], int , int , double );
 void dist_2(double R[][3], double Rij[3], double , int , int );
 double Vol(double, double );
 double V(double , double , double , double );
-double W(double , double , double , double);
+void montecarlo(double R[][3], int , double , int , double * , double *);
 
 int main(){
 
@@ -21,17 +21,55 @@ int main(){
     double rho = 0.0218;
     double L = pow(N/rho, 1./3);
     double R[N][3];
-    double dr=5;
-    double M=L/(2*dr);
     double r=1;
     double D=0.18;
     double eps = 10.22;
     double sigma = 2.556;
     double h = 6.0596;
-    double c = 0;
     r_initiator(n, rho, R, "CC.dat");
     
     return 0;
+}
+
+
+void montecarlo(double R[][3], int mc_cycles, double D, int variation_number, double *cumulative_E, double *cumulative_E2, double L){
+    int accept, reject;
+    double alpha = 0.5;
+    double E, E2, delta_E, wf_old, wf_new;
+    for(int var = 0; var <= variation_number; var++){
+        alpha += 0.1;
+        E = E2 = delta_E = 0;
+        accept = reject = 0;
+        wf_old = wf(R, alpha, L);
+        for(int i=1; i<1000000; i++){
+
+            double R_new[N][3];
+    
+            for(int j = 0; j < N; j++){
+                for(int k = 0; k < 3; k++){
+                    R_new[j][k]=R[j][k] + D*(rand()/(RAND_MAX + 1.)-0.5);
+                }
+            }
+            wf_new = wf(R_new, alpha, L);
+    
+            if((wf_new/wf_old) > rand()/(RAND_MAX + 1.)){
+                for(int j = 0; j < N; j++){
+                    for(int k = 0; k < 3; k++){
+                        R[j][k]=R_new[j][k];
+                    }
+                }
+                wf_old = wf_new;
+                accept++;
+            }
+            else{
+                reject++;
+            }
+    
+
+            }
+
+    }
+
 }
 
 
@@ -47,12 +85,6 @@ void dist_2(double R[][3], double Rpq[3], double L, int p, int q){
     Rpq[2] = R[p][2] - R[q][2]-L*rint((R[p][2] - R[q][2])/L);
 }
 
-
-double Vol(double r, double dr){
-    return (4./3)*PI*(r+dr/2)*(r+dr/2)*(r+dr/2)-(4./3)*PI*(r-dr/2)*(r-dr/2)*(r-dr/2);
-}
-
-
 //Definizione del potenziale di coppia
 double V(double r, double L, double sigma, double epsilon){
     double r6 = (sigma/r)*(sigma/r)*(sigma/r)*(sigma/r)*(sigma/r)*(sigma/r);
@@ -65,16 +97,37 @@ double V(double r, double L, double sigma, double epsilon){
     }
 }
 
+//Definizione della funzione u
+double u(double r_ij, double alpha1){
+    return (alpha1/r_ij)*(alpha1/r_ij)*(alpha1/r_ij)*(alpha1/r_ij)*(alpha1/r_ij);
+}
 
-double W(double rij, double sigma, double L, double epsilon){
-    double r6 = (sigma/rij)*(sigma/rij)*(sigma/rij)*(sigma/rij)*(sigma/rij)*(sigma/rij);
-    double dV;
-    if(rij <= L/2){
-        dV = -6*(V(rij, L, sigma, epsilon) + 4*epsilon*r6*r6)/rij;
+//Definizione della funzione u con correzione per le condizioni al contorno
+double u_2(double r_ij, double alpha1, double L){
+    if(r_ij <= L/2){
+        return u(r_ij, alpha1) + u(L-r_ij, alpha1) - 2*u(L/2, alpha1);
     }
     else{
-        dV = 0;
+        return 0;
     }
-    return -dV*rij/N;
-
 }
+
+//Definizione della funzione d'onda
+double psi(double R[][3], double alpha1, double L){
+    double u_f = 0;
+    for(int i = 0; i < N-1; i++){
+        for(int j = i+1; j<N; j++){
+            double r_ij = dist(R, i, j, L);
+            u_f += u_2(r_ij, alpha1, L);
+        }
+    }
+    return exp((-1./2)*u_f);
+}
+
+//Calcolo del modulo quadro della funzione d'onda
+double wf(double R[][3], double alpha1, double L){
+    double psii = psi(R, alpha1, L); 
+    return psii*psii;
+}
+
+
