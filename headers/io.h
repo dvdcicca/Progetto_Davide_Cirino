@@ -1,9 +1,9 @@
 #include <stdio.h>
 
-void output(double t, double P, double E, double acc, char *title){
+void output(double t, double E, double acc, char *title){
     FILE *fp;
     fp = fopen(title, "a");
-    fprintf(fp, "%lf %lf %lf %lf \n", t, P, E, acc);
+    fprintf(fp, "%lf %lf %lf \n", t, E, acc);
     fclose(fp);
     return;
 }
