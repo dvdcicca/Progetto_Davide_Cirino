@@ -6,33 +6,39 @@
 
 #define PI 3.14159265358979323846
 #define N 64
+#define h 6.0596
 
 //Dichiarazione delle varie funzioni
 double dist(double R[][3], int , int , double );
 void dist_2(double R[][3], double Rij[3], double , int , int );
-double Vol(double, double );
 double V(double , double , double , double );
-void montecarlo(double R[][3], double , double *, double, double, double, double);
+void montecarlo(double R[][3], double, double, double, double, double);
+double u(double , double);
+double u_prime(double, double, double);
+double u_second(double, double, double);
+double psi(double R[][3], double , double );
+double u_2(double , double , double );
+double wf(double R[][3], double , double );
 
 int main(){
 
     flush("CC.dat");
+    flush("qmc.dat");
     int n = 4;
     double rho = 0.0218;
     double L = pow(N/rho, 1./3);
     double R[N][3];
     double r=1;
-    double D=0.18;
+    double D=0.27;
     double eps = 10.22;
     double sigma = 2.556;
-    double h = 6.0596;
     double alpha = 2.5;
     r_initiator(n, rho, R, "CC.dat");
-    
+    montecarlo(R, D, L, alpha, sigma, eps);
     return 0;
 }
 
-void montecarlo(double R[][3], double D, double *cumulative_E, double L, double alpha, double sigma, double epsilon){
+void montecarlo(double R[][3], double D, double L, double alpha, double sigma, double epsilon){
     int accept, reject;
     double E, wf_old, wf_new;
     accept = reject = 0;
@@ -44,8 +50,30 @@ void montecarlo(double R[][3], double D, double *cumulative_E, double L, double 
             E+= V(r, L, sigma, epsilon);
         }
     }
-    for (int i = 1; i < 1000000; i++){
+    for(int i = 0; i < N; i++){
+        double K_i = 0;
+        for(int j = 0; j < N; j++){
+            double r_ij = dist(R, i, j, L);
+            if(j != i){
+                K_i -= u_prime(r_ij, alpha, L) + u_second(r_ij, alpha, L)/2;
+                for(int l = 0; l < N; l++){
+                    double R_ij[3];
+                    double R_il[3];
+                    dist_2(R, R_ij, L, i, j);
+                    dist_2(R, R_il, L, i, l);
+                    double r_il = dist(R, i, l, L);
+                    if(l != i){
+                        K_i += (R_ij[0]*R_il[0]+R_ij[1]*R_il[1]+R_ij[2]*R_il[2])*u_prime(r_ij, alpha, L)*u_prime(r_il, alpha, L)/4;
+                    }
+                }
+            }
+        }
+        E -= h*K_i;
+    }
 
+    output(0, E, 0.0, "qmc.dat");
+    for (int i = 1; i < 1000000; i++){
+        double E_new = 0;
         double R_new[N][3];
 
         for (int j = 0; j < N; j++){
@@ -55,18 +83,49 @@ void montecarlo(double R[][3], double D, double *cumulative_E, double L, double 
         }
         wf_new = wf(R_new, alpha, L);
 
+        for(int i = 0; i < N; i++){
+            for(int j = i+1; j < N; j++){
+                double r = dist(R, i, j, L);
+                E_new+= V(r, L, sigma, epsilon);
+            }
+        }
+        for(int i = 0; i < N; i++){
+            double K_i = 0;
+            for(int j = 0; j < N; j++){
+                double r_ij = dist(R, i, j, L);
+                if(j != i){
+                    K_i -= u_prime(r_ij, alpha, L) + u_second(r_ij, alpha, L)/2;
+                    for(int l = 0; l < N; l++){
+                        double R_ij[3];
+                        double R_il[3];
+                        dist_2(R, R_ij, L, i, j);
+                        dist_2(R, R_il, L, i, l);
+                        double r_il = dist(R, i, l, L);
+                        if(l != i){
+                            K_i += (R_ij[0]*R_il[0]+R_ij[1]*R_il[1]+R_ij[2]*R_il[2])*u_prime(r_ij, alpha, L)*u_prime(r_il, alpha, L)/4;
+                        }
+                    }
+                }
+            }
+            E_new -= h*K_i;
+        }
+
+
         if ((wf_new / wf_old) > rand() / (RAND_MAX + 1.)){
             for (int j = 0; j < N; j++){
                 for (int k = 0; k < 3; k++){
                     R[j][k] = R_new[j][k];
                 }
             }
+            E = E_new;
             wf_old = wf_new;
             accept++;
+
         }
         else{
             reject++;
         }
+        output(i, E, accept*1./i, "qmc.dat");
     }
 }
 
