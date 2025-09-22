@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 #include <float.h>
-#include "headers/cubegnr.h" //funzioni per creare il mio reticolo cubico e che mi include anche le funzioni per stampare in un file
+#include "headers/cubegnr.h" //funzioni per creare il mio reticolo cubico e che mi include anche le funzioni per stampare i dati in un file
 
-
+//Definisco le costanti del mio problema
 #define PI 3.14159265358979323846
 #define N 64
 #define h 6.0596
@@ -14,15 +15,17 @@ void dist_2(double R[][3], double Rij[3], double , int , int );
 double V(double , double , double , double );
 void montecarlo(double R[][3], double, double, double, double, double);
 double u(double , double);
-double u_prime(double, double, double);
-double u_second(double, double, double);
-double psi(double R[][3], double , double );
-double u_2(double , double , double );
-double wf(double R[][3], double , double );
+double u_prime(double, double);
+double u2_prime(double, double, double);
+double u_second(double, double);
+double u2_second(double, double, double);
+double log_psi(double R[][3], double , double );
+double u2(double , double , double );
+
 
 int main(){
 
-    flush("CC.dat");
+    flush("CC.dat");  //svuota il file passato come argomento
     flush("qmc.dat");
     int n = 4;
     double rho = 0.0218;
@@ -43,7 +46,7 @@ void montecarlo(double R[][3], double D, double L, double alpha, double sigma, d
     double E, wf_old, wf_new;
     accept = reject = 0;
     E = 0;
-    wf_old = wf(R, alpha, L);
+    wf_old = log_psi(R, alpha, L);
     for(int i = 0; i < N; i++){
         for(int j = i+1; j < N; j++){
             double r = dist(R, i, j, L);
@@ -55,7 +58,7 @@ void montecarlo(double R[][3], double D, double L, double alpha, double sigma, d
         for(int j = 0; j < N; j++){
             double r_ij = dist(R, i, j, L);
             if(j != i){
-                K_i -= u_prime(r_ij, alpha, L) + u_second(r_ij, alpha, L)/2;
+                K_i -= u2_prime(r_ij, alpha, L) + u2_second(r_ij, alpha, L)/2;
                 for(int l = 0; l < N; l++){
                     double R_ij[3];
                     double R_il[3];
@@ -63,7 +66,7 @@ void montecarlo(double R[][3], double D, double L, double alpha, double sigma, d
                     dist_2(R, R_il, L, i, l);
                     double r_il = dist(R, i, l, L);
                     if(l != i){
-                        K_i += (R_ij[0]*R_il[0]+R_ij[1]*R_il[1]+R_ij[2]*R_il[2])*u_prime(r_ij, alpha, L)*u_prime(r_il, alpha, L)/4;
+                        K_i += (R_ij[0]*R_il[0]+R_ij[1]*R_il[1]+R_ij[2]*R_il[2])*u2_prime(r_ij, alpha, L)*u2_prime(r_il, alpha, L)/4;
                     }
                 }
             }
@@ -72,7 +75,7 @@ void montecarlo(double R[][3], double D, double L, double alpha, double sigma, d
     }
 
     output(0, E, 0.0, "qmc.dat");
-    for (int i = 1; i < 1000000; i++){
+    for (int i = 1; i < 10000; i++){
         double E_new = 0;
         double R_new[N][3];
 
@@ -81,11 +84,11 @@ void montecarlo(double R[][3], double D, double L, double alpha, double sigma, d
                 R_new[j][k] = R[j][k] + D * (rand() / (RAND_MAX + 1.) - 0.5);
             }
         }
-        wf_new = wf(R_new, alpha, L);
+        wf_new = log_psi(R_new, alpha, L);
 
         for(int i = 0; i < N; i++){
             for(int j = i+1; j < N; j++){
-                double r = dist(R, i, j, L);
+                double r = dist(R_new, i, j, L);
                 E_new+= V(r, L, sigma, epsilon);
             }
         }
@@ -94,15 +97,15 @@ void montecarlo(double R[][3], double D, double L, double alpha, double sigma, d
             for(int j = 0; j < N; j++){
                 double r_ij = dist(R, i, j, L);
                 if(j != i){
-                    K_i -= u_prime(r_ij, alpha, L) + u_second(r_ij, alpha, L)/2;
+                    K_i -= u2_prime(r_ij, alpha, L) + u2_second(r_ij, alpha, L)/2;
                     for(int l = 0; l < N; l++){
                         double R_ij[3];
                         double R_il[3];
-                        dist_2(R, R_ij, L, i, j);
-                        dist_2(R, R_il, L, i, l);
-                        double r_il = dist(R, i, l, L);
+                        dist_2(R_new, R_ij, L, i, j);
+                        dist_2(R_new, R_il, L, i, l);
+                        double r_il = dist(R_new, i, l, L);
                         if(l != i){
-                            K_i += (R_ij[0]*R_il[0]+R_ij[1]*R_il[1]+R_ij[2]*R_il[2])*u_prime(r_ij, alpha, L)*u_prime(r_il, alpha, L)/4;
+                            K_i += (R_ij[0]*R_il[0]+R_ij[1]*R_il[1]+R_ij[2]*R_il[2])*u2_prime(r_ij, alpha, L)*u2_prime(r_il, alpha, L)/4;
                         }
                     }
                 }
@@ -111,7 +114,7 @@ void montecarlo(double R[][3], double D, double L, double alpha, double sigma, d
         }
 
 
-        if ((wf_new / wf_old) > rand() / (RAND_MAX + 1.)){
+        if (2.0*(wf_new - wf_old) > log(rand() / (RAND_MAX + 1.))){
             for (int j = 0; j < N; j++){
                 for (int k = 0; k < 3; k++){
                     R[j][k] = R_new[j][k];
@@ -140,6 +143,7 @@ void dist_2(double R[][3], double Rpq[3], double L, int p, int q){
     Rpq[2] = R[p][2] - R[q][2]-L*rint((R[p][2] - R[q][2])/L);
 }
 
+
 //Definizione del potenziale di coppia
 double V(double r, double L, double sigma, double epsilon){
     double r6 = (sigma/r)*(sigma/r)*(sigma/r)*(sigma/r)*(sigma/r)*(sigma/r);
@@ -153,14 +157,14 @@ double V(double r, double L, double sigma, double epsilon){
 }
 
 //Definizione della funzione u
-double u(double r_ij, double alpha1){
-    return (alpha1/r_ij)*(alpha1/r_ij)*(alpha1/r_ij)*(alpha1/r_ij)*(alpha1/r_ij);
+double u(double r, double a1){
+    return (a1/r)*(a1/r)*(a1/r)*(a1/r)*(a1/r);
 }
 
 //Definizione della funzione u con correzione per le condizioni al contorno
-double u_2(double r_ij, double alpha1, double L){
-    if(r_ij <= L/2){
-        return u(r_ij, alpha1) + u(L-r_ij, alpha1) - 2*u(L/2, alpha1);
+double u2(double r, double a1, double L){
+    if(r <= L/2){
+        return u(r, a1) + u(L-r, a1) - 2*u(L/2, a1);
     }
     else{
         return 0;
@@ -168,32 +172,43 @@ double u_2(double r_ij, double alpha1, double L){
 }
 
 //Definizione derivata prima della funzione u
-double u_prime(double r_ij, double alpha1, double L){
-    return -5*u_2(r_ij, alpha1, L)/r_ij;
+double u_prime(double r, double a1){
+    return -5*(a1*a1*a1*a1*a1)*1./(r*r*r*r*r*r);
 }
 
+double u2_prime(double r, double a1, double L){
+    if (r<=L/2){
+        return u_prime(r, a1) - u_prime(L-r, a1);
+    }
+    else{
+        return 0;
+    }
+}
 
 //Definizione derivata seconda della funzione u
-double u_second(double r_ij, double alpha1, double L){
-    return 30*u_2(r_ij, alpha1, L)/(r_ij*r_ij);
+double u_second(double r, double a1){
+    return 30*(a1*a1*a1*a1*a1)*1./(r*r*r*r*r*r*r);
 }
 
-//Definizione della funzione d'onda
-double psi(double R[][3], double alpha1, double L){
+double u2_second(double r, double a1, double L){
+    if (r<=L/2){
+        return u_second(r, a1) + u_second(L-r, a1);
+    }
+    else{
+        return 0;
+    }
+}
+
+//Definizione del logaritmo della funzione d'onda
+double log_psi(double R[][3], double a1, double L){
     double u_f = 0;
     for(int i = 0; i < N-1; i++){
         for(int j = i+1; j<N; j++){
             double r_ij = dist(R, i, j, L);
-            u_f += u_2(r_ij, alpha1, L);
+            u_f += u2(r_ij, a1, L);
         }
     }
-    return exp((-1./2)*u_f);
-}
-
-//Calcolo del modulo quadro della funzione d'onda
-double wf(double R[][3], double alpha1, double L){
-    double psii = psi(R, alpha1, L); 
-    return psii*psii;
+    return (-1./2)*u_f;
 }
 
 
