@@ -2,46 +2,50 @@
 #include <time.h>
 #include <math.h>
 #include <float.h>
-#include "headers/cubegnr.h" //funzioni per creare il mio reticolo cubico e che mi include anche le funzioni per stampare i dati in un file
+#include "headers/cubegnr.h" //funzioni per creare il mio reticolo cubico e che mi include anche le funzioni per stampare in un file
 
-//Definisco le costanti del mio problema
+//Definizione delle costanti
 #define PI 3.14159265358979323846
 #define N 64
 #define h 6.0596
+#define rho 0.02186
+#define eps 10.22
+#define sigma 2.556
+#define a2 5
+#define stepn 20000
+#define stepb 5000
+
 
 //Dichiarazione delle varie funzioni
 double dist(double R[][3], int , int , double );
 void dist_2(double R[][3], double Rij[3], double , int , int );
-double V(double , double , double , double );
-void montecarlo(double R[][3], double, double, double, double, double);
+double V(double , double );
+void montecarlo(double R[][3], double, double, double);
 double u(double , double);
 double u_prime(double, double);
 double u2_prime(double, double, double);
 double u_second(double, double);
 double u2_second(double, double, double);
 double log_psi(double R[][3], double , double );
-double u2(double , double , double );
-
+double u_2(double , double , double );
 
 int main(){
 
-    flush("CC.dat");  //svuota il file passato come argomento
+    flush("CC.dat"); //pulisce il file se esistente
     flush("qmc.dat");
     int n = 4;
-    double rho = 0.0218;
     double L = pow(N/rho, 1./3);
     double R[N][3];
     double r=1;
     double D=0.27;
-    double eps = 10.22;
-    double sigma = 2.556;
     double alpha = 2.5;
     r_initiator(n, rho, R, "CC.dat");
-    montecarlo(R, D, L, alpha, sigma, eps);
+    montecarlo(R, D, L, alpha);
     return 0;
 }
 
-void montecarlo(double R[][3], double D, double L, double alpha, double sigma, double epsilon){
+//Definizione della funzione contenente il metodo M(RT)²
+void montecarlo(double R[][3], double D, double L, double alpha){
     int accept, reject;
     double E, wf_old, wf_new;
     accept = reject = 0;
@@ -50,7 +54,7 @@ void montecarlo(double R[][3], double D, double L, double alpha, double sigma, d
     for(int i = 0; i < N; i++){
         for(int j = i+1; j < N; j++){
             double r = dist(R, i, j, L);
-            E+= V(r, L, sigma, epsilon);
+            E+= V(r, L);
         }
     }
     for(int i = 0; i < N; i++){
@@ -75,7 +79,7 @@ void montecarlo(double R[][3], double D, double L, double alpha, double sigma, d
     }
 
     output(0, E, 0.0, "qmc.dat");
-    for (int i = 1; i < 10000; i++){
+    for (int i = 1; i <stepn; i++){
         double E_new = 0;
         double R_new[N][3];
 
@@ -89,7 +93,7 @@ void montecarlo(double R[][3], double D, double L, double alpha, double sigma, d
         for(int i = 0; i < N; i++){
             for(int j = i+1; j < N; j++){
                 double r = dist(R_new, i, j, L);
-                E_new+= V(r, L, sigma, epsilon);
+                E_new+= V(r, L);
             }
         }
         for(int i = 0; i < N; i++){
@@ -132,11 +136,12 @@ void montecarlo(double R[][3], double D, double L, double alpha, double sigma, d
     }
 }
 
+//Funzione che calcola la distanza tra due particelle
 double dist(double R[][3], int p, int q, double L){    
     return sqrt((R[p][0]-R[q][0]-L*rint((R[p][0] - R[q][0])/L))*(R[p][0]-R[q][0]-L*rint((R[p][0] - R[q][0])/L))+(R[p][1]-R[q][1]-L*rint((R[p][1] - R[q][1])/L))*(R[p][1]-R[q][1]-L*rint((R[p][1] - R[q][1])/L))+(R[p][2]-R[q][2]-L*rint((R[p][2] - R[q][2])/L))*(R[p][2]-R[q][2]-L*rint((R[p][2] - R[q][2])/L)));
 } 
 
-
+//Funzione che calcola la distanza sui tre assi tra due particelle
 void dist_2(double R[][3], double Rpq[3], double L, int p, int q){
     Rpq[0] = R[p][0] - R[q][0]-L*rint((R[p][0] - R[q][0])/L);
     Rpq[1] = R[p][1] - R[q][1]-L*rint((R[p][1] - R[q][1])/L);
@@ -145,11 +150,11 @@ void dist_2(double R[][3], double Rpq[3], double L, int p, int q){
 
 
 //Definizione del potenziale di coppia
-double V(double r, double L, double sigma, double epsilon){
+double V(double r, double L){
     double r6 = (sigma/r)*(sigma/r)*(sigma/r)*(sigma/r)*(sigma/r)*(sigma/r);
     double L6 = (2*sigma/L)*(2*sigma/L)*(2*sigma/L)*(2*sigma/L)*(2*sigma/L)*(2*sigma/L);
     if(r <= L/2){
-        return 4*epsilon*r6*(r6 - 1) - 4*epsilon*L6*(L6 - 1);
+        return 4*eps*r6*(r6 - 1) - 4*eps*L6*(L6 - 1);
     }
     else{
         return 0;
@@ -162,7 +167,7 @@ double u(double r, double a1){
 }
 
 //Definizione della funzione u con correzione per le condizioni al contorno
-double u2(double r, double a1, double L){
+double u_2(double r, double a1, double L){
     if(r <= L/2){
         return u(r, a1) + u(L-r, a1) - 2*u(L/2, a1);
     }
@@ -205,10 +210,12 @@ double log_psi(double R[][3], double a1, double L){
     for(int i = 0; i < N-1; i++){
         for(int j = i+1; j<N; j++){
             double r_ij = dist(R, i, j, L);
-            u_f += u2(r_ij, a1, L);
+            u_f += u_2(r_ij, a1, L);
         }
     }
     return (-1./2)*u_f;
 }
+
+//Definizione della funzione che calcola l'energia locale
 
 
